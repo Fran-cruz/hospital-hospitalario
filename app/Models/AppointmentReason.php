@@ -11,8 +11,8 @@ class AppointmentReason extends Model
     use HasFactory;
 
     // Funciones para las Relaciones
-    public function specialty()
+    public function speciality()
     {
-        return $this->belongsTo(Specialty::class);
+        return $this->belongsTo(Speciality::class);
     }
 }

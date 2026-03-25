@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
-use App\Models\Speciality;
+use App\Http\Controllers\Controller;
+use App\Models\AppointmentReason;
 use Illuminate\Http\Request;
 
-class SpecialityController extends Controller
+class AppointmentReasonController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -34,7 +35,7 @@ class SpecialityController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Speciality $speciality)
+    public function show(AppointmentReason $appointmentReason)
     {
         //
     }
@@ -42,7 +43,7 @@ class SpecialityController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Speciality $speciality)
+    public function edit(AppointmentReason $appointmentReason)
     {
         //
     }
@@ -50,7 +51,7 @@ class SpecialityController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Speciality $speciality)
+    public function update(Request $request, AppointmentReason $appointmentReason)
     {
         //
     }
@@ -58,7 +59,7 @@ class SpecialityController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Speciality $speciality)
+    public function destroy(AppointmentReason $appointmentReason)
     {
         //
     }

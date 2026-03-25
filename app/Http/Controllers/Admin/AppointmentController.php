@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
 use App\Models\Appointment;
+use App\Models\Doctor;
 use Illuminate\Http\Request;
 
 class AppointmentController extends Controller
@@ -10,9 +11,35 @@ class AppointmentController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
+        $query = Appointment::with(['patient.user', 'doctor.user', 'reason.speciality'])
+            ->when($request->status,    fn($q) => $q->where('status', $request->status))
+            ->when($request->doctor_id, fn($q) => $q->where('doctor_id', $request->doctor_id))
+            ->when($request->from,      fn($q) => $q->whereDate('start_time', '>=', $request->from))
+            ->when($request->to,        fn($q) => $q->whereDate('start_time', '<=', $request->to))
+            ->latest('start_time')
+            ->get()
+            ->map(fn($a) => [
+                'id'         => $a->id,
+                'start_time' => $a->start_time,
+                'end_time'   => $a->end_time,
+                'status'     => $a->status,
+                'notes'      => $a->notes,
+                'patient'    => $a->patient->user->name,
+                'doctor'     => $a->doctor->user->name,
+                'speciality'  => $a->reason->speciality->name,
+                'reason'     => $a->reason->name,
+            ]);
+
+        $doctors = Doctor::with('user')->get()
+            ->map(fn($d) => ['id' => $d->id, 'name' => $d->user->name]);
+
+        return inertia('Admin/Appointments/Index', [
+            'appointments' => $query,
+            'doctors'      => $doctors,
+            'filters'      => $request->only(['status', 'doctor_id', 'from', 'to']),
+        ]);
     }
 
     /**
@@ -28,7 +55,7 @@ class AppointmentController extends Controller
      */
     public function store(Request $request)
     {
-        // Idea vaga del metodo STORE
+        // Idea vaga del STORE
 //        $exists = Appointment::where('doctor_id', $doctorId)
 //            ->where('status', '!=', 'cancelled')
 //            ->where(function ($q) use ($start, $end) {
@@ -42,7 +69,7 @@ class AppointmentController extends Controller
 //
 //        if ($exists) {
 //            throw ValidationException::withMessages([
-//                'time' => 'El médico ya tiene una cita en ese horario.'
+//                'time' => 'El médico ya tiene cita en ese horario.'
 //            ]);
 //        }
     }

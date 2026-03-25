@@ -5,6 +5,7 @@ import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
+import VueApexCharts from 'vue3-apexcharts'
 
 import vuetify from './Plugins/vuetify';
 
@@ -24,6 +25,7 @@ createInertiaApp({
             .use(plugin)   // Inertia plugin
             .use(ZiggyVue) // Ziggy for Laravel named routes
             .use(vuetify)  // Vuetify plugin
+            .use(VueApexCharts) // ApexCharts plugin
             .mount(el);
     },
 
