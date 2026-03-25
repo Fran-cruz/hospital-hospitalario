@@ -6,6 +6,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    title: {
+        type: String,
+        default: '',
+    },
     maxWidth: {
         type: String,
         default: '2xl',
@@ -17,16 +21,16 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close']);
+
 const dialog = ref();
 const showSlot = ref(props.show);
 
 watch(
     () => props.show,
-    () => {
-        if (props.show) {
+    (newValue) => {
+        if (newValue) {
             document.body.style.overflow = 'hidden';
             showSlot.value = true;
-
             dialog.value?.showModal();
         } else {
             document.body.style.overflow = '';
@@ -37,6 +41,7 @@ watch(
             }, 200);
         }
     },
+    { immediate: true }
 );
 
 const close = () => {
@@ -48,18 +53,18 @@ const close = () => {
 const closeOnEscape = (e) => {
     if (e.key === 'Escape') {
         e.preventDefault();
-
         if (props.show) {
             close();
         }
     }
 };
 
-onMounted(() => document.addEventListener('keydown', closeOnEscape));
+onMounted(() => {
+    document.addEventListener('keydown', closeOnEscape);
+});
 
 onUnmounted(() => {
     document.removeEventListener('keydown', closeOnEscape);
-
     document.body.style.overflow = '';
 });
 
@@ -70,19 +75,17 @@ const maxWidthClass = computed(() => {
         lg: 'sm:max-w-lg',
         xl: 'sm:max-w-xl',
         '2xl': 'sm:max-w-2xl',
-    }[props.maxWidth];
+    }[props.maxWidth] || 'sm:max-w-2xl';
 });
 </script>
 
 <template>
     <dialog
-        class="z-50 m-0 min-h-full min-w-full overflow-y-auto bg-transparent backdrop:bg-transparent"
         ref="dialog"
+        class="z-50 m-0 min-h-full min-w-full overflow-y-auto bg-transparent backdrop:bg-transparent"
     >
-        <div
-            class="fixed inset-0 z-50 overflow-y-auto px-4 py-6 sm:px-0"
-            scroll-region
-        >
+        <div class="fixed inset-0 z-50 overflow-y-auto px-4 py-6 sm:px-0" scroll-region>
+            <!-- Backdrop -->
             <Transition
                 enter-active-class="ease-out duration-300"
                 enter-from-class="opacity-0"
@@ -96,12 +99,11 @@ const maxWidthClass = computed(() => {
                     class="fixed inset-0 transform transition-all"
                     @click="close"
                 >
-                    <div
-                        class="absolute inset-0 bg-gray-500 opacity-75 dark:bg-gray-900"
-                    />
+                    <div class="absolute inset-0 bg-gray-500 opacity-75 dark:bg-gray-900" />
                 </div>
             </Transition>
 
+            <!-- Modal Content -->
             <Transition
                 enter-active-class="ease-out duration-300"
                 enter-from-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
@@ -112,10 +114,27 @@ const maxWidthClass = computed(() => {
             >
                 <div
                     v-show="show"
-                    class="mb-6 transform overflow-hidden rounded-lg bg-white shadow-xl transition-all sm:mx-auto sm:w-full dark:bg-gray-800"
+                    class="mb-6 transform overflow-hidden rounded-2xl bg-white shadow-xl transition-all sm:mx-auto sm:w-full dark:bg-gray-800"
                     :class="maxWidthClass"
                 >
-                    <slot v-if="showSlot" />
+                    <!-- Header (agregado de la Versión 1) -->
+                    <div v-if="title" class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                        <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">
+                            {{ title }}
+                        </h3>
+                        <button
+                            v-if="closeable"
+                            @click="close"
+                            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-3xl leading-none transition-colors"
+                        >
+                            &times;
+                        </button>
+                    </div>
+
+                    <!-- Contenido principal -->
+                    <div class="p-6">
+                        <slot v-if="showSlot" />
+                    </div>
                 </div>
             </Transition>
         </div>

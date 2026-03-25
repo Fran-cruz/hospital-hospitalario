@@ -5,10 +5,12 @@ import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
+import VueApexCharts from 'vue3-apexcharts'
 
 import vuetify from './Plugins/vuetify';
+import Modal from "@/Components/Modal.vue";
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'Hospital Hospitalario';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
@@ -23,7 +25,9 @@ createInertiaApp({
         return createApp({ render: () => h(App, props) })
             .use(plugin)   // Inertia plugin
             .use(ZiggyVue) // Ziggy for Laravel named routes
-            .use(vuetify)  // Vuetify plugin
+            // .use(vuetify)  // Vuetify plugin
+            .use(VueApexCharts) // ApexCharts plugin
+            .component('Modal', Modal)   // ← ADD THIS LINE
             .mount(el);
     },
 

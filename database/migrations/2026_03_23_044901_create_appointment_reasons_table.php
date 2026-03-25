@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('appointment_reasons', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->foreignId('specialty_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('speciality_id')->constrained()->cascadeOnDelete();
             $table->timestamps();
         });
     }
