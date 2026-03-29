@@ -8,59 +8,66 @@ use Illuminate\Http\Request;
 
 class SpecialityController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        //
+        $specialities = Speciality::orderBy('name')
+            ->withCount('appointmentReasons')
+            ->get()
+            ->map(fn($s) => [
+                'id'                       => $s->id,
+                'name'                     => $s->name,
+                'appointment_reasons_count' => $s->appointment_reasons_count,
+            ]);
+
+        return inertia('Admin/Specialities/Index', compact('specialities'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
+        $request->validate([
+            'name' => 'required|string|max:100|unique:specialities,name',
+        ], [
+            'name.required' => 'El nombre de la especialidad es obligatorio.',
+            'name.unique'   => 'Ya existe una especialidad con ese nombre.',
+        ]);
+
+        Speciality::create(['name' => $request->name]);
+
+        return back()->with('success', 'Especialidad creada correctamente.');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Speciality $speciality)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Speciality $speciality)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Speciality $speciality)
     {
-        //
+        $request->validate([
+            'name' => 'required|string|max:100|unique:specialities,name,' . $speciality->id,
+        ], [
+            'name.required' => 'El nombre de la especialidad es obligatorio.',
+            'name.unique'   => 'Ya existe una especialidad con ese nombre.',
+        ]);
+
+        $speciality->update(['name' => $request->name]);
+
+        return back()->with('success', 'Especialidad actualizada correctamente.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Speciality $speciality)
     {
-        //
+        // Verificar si tiene motivos asociados
+        if ($speciality->appointmentReasons()->count() > 0) {
+            return back()->withErrors([
+                'delete' => 'No se puede eliminar: esta especialidad tiene motivos de cita asociados.'
+            ]);
+        }
+
+        // Verificar si tiene médicos asociados
+        if ($speciality->doctors()->count() > 0) {
+            return back()->withErrors([
+                'delete' => 'No se puede eliminar: hay médicos asignados a esta especialidad.'
+            ]);
+        }
+
+        $speciality->delete();
+
+        return back()->with('success', 'Especialidad eliminada correctamente.');
     }
 }

@@ -19,11 +19,14 @@ Route::get('/', fn() => redirect('login'));
 
 // ── Redirección por rol tras login ────────────────────────────────────────
 Route::middleware('auth')->get('/dashboard', function () {
+    if (!auth()->check()) {
+        abort(403, 'Unauthorized action.');
+    }
+
     return match (auth()->user()->role) {
         'admin'   => redirect()->route('admin.dashboard'),
         'doctor'  => redirect()->route('doctor.appointments'),
         'patient' => redirect()->route('patient.appointments'),
-        default   => abort(403, 'Unauthorized action.')
 //        default    => redirect('login'),
     };
 })->name('dashboard');
@@ -48,10 +51,12 @@ Route::middleware(['auth', 'role:admin'])
         Route::resource('patients', PatientController::class)->only(['index', 'show']);
 
         // Especialidades CRUD
-        Route::resource('specialities', SpecialityController::class)->except(['show']);
+        Route::resource('specialities', SpecialityController::class)
+            ->except(['show', 'create', 'edit']);
 
-        // Motivos de cita CRUD
-        Route::resource('reasons', AppointmentReasonController::class)->except(['show']);
+        // Motivos — CRUD completo excepto show
+        Route::resource('reasons', AppointmentReasonController::class)
+            ->except(['show', 'create', 'edit']);
 
         // Citas (solo lectura + filtros)
         Route::get('appointments',       [AdminAppointmentController::class, 'index'])->name('appointments.index');
@@ -72,19 +77,33 @@ Route::middleware(['auth', 'role:patient'])
     ->prefix('patient')
     ->name('patient.')
     ->group(function () {
-        // Historial
-        Route::get('appointments',               [PatientAppointmentController::class, 'index'])->name('appointments');
 
-        // Nueva cita — IMPORTANTE: /create antes de /{appointment}
-        Route::get('appointments/create',        [PatientAppointmentController::class, 'create'])->name('appointments.create');
-        Route::post('appointments',              [PatientAppointmentController::class, 'store'])->name('appointments.store');
+        // Historial
+        Route::get('appointments', [PatientAppointmentController::class, 'index'])
+            ->name('appointments');
+
+        // IMPORTANTE: /create debe ir ANTES de /{appointment}
+        Route::get('appointments/create', [PatientAppointmentController::class, 'create'])
+            ->name('appointments.create');
+        Route::post('appointments', [PatientAppointmentController::class, 'store'])
+            ->name('appointments.store');
 
         // Detalle
-        Route::get('appointments/{appointment}', [PatientAppointmentController::class, 'show'])->name('appointments.show');
+        Route::get('appointments/{appointment}', [PatientAppointmentController::class, 'show'])
+            ->name('appointments.show');
 
-        // Acciones sobre cita
-        Route::post('appointments/{appointment}/confirm',   [PatientAppointmentController::class, 'confirm'])->name('appointments.confirm');
-        Route::post('appointments/{appointment}/cancel',    [PatientAppointmentController::class, 'cancel'])->name('appointments.cancel');
-        Route::post('appointments/{appointment}/reprogram', [PatientAppointmentController::class, 'reprogram'])->name('appointments.reprogram');
+        // Acciones
+        Route::post('appointments/{appointment}/confirm', [PatientAppointmentController::class, 'confirm'])
+            ->name('appointments.confirm');
+        Route::post('appointments/{appointment}/cancel', [PatientAppointmentController::class, 'cancel'])
+            ->name('appointments.cancel');
+        Route::post('appointments/{appointment}/reprogram', [PatientAppointmentController::class, 'reprogram'])
+            ->name('appointments.reprogram');
     });
 
+Route::middleware(['auth'])->group(function () {
+    Route::get('/api/availability', [
+        \App\Http\Controllers\Api\AppointmentApiController::class,
+        'availability'
+    ])->name('api.availability');
+});

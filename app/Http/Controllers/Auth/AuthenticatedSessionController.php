@@ -13,50 +13,35 @@ use Inertia\Response;
 
 class AuthenticatedSessionController extends Controller
 {
-    /**
-     * Display the login view.
-     */
     public function create(): Response
     {
         return Inertia::render('Auth/Login', [
             'canResetPassword' => Route::has('password.request'),
-            'status' => session('status'),
+            'status'           => session('status'),
         ]);
     }
 
-    /**
-     * Handle an incoming authentication request.
-     */
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
-
         $request->session()->regenerate();
 
-        // Redirección mejorada según el rol del usuario
-        $user = $request->user();
+        // Redirigir según rol
+        $role = Auth::user()->role;
 
-        $redirectRoute = match ($user->role) {
-            'admin'   => route('admin.dashboard'),
-            'doctor'  => route('doctor.appointments'),
-            'patient' => route('patient.appointments'),
-            default   => route('dashboard'),   // fallback
+        return match ($role) {
+            'admin'   => redirect()->intended(route('admin.dashboard')),
+            'doctor'  => redirect()->intended(route('doctor.appointments')),
+            'patient' => redirect()->intended(route('patient.appointments')),
+            default   => redirect()->intended(route('patient.appointments')),
         };
-
-        return redirect()->intended($redirectRoute);
     }
 
-    /**
-     * Destroy an authenticated session.
-     */
     public function destroy(Request $request): RedirectResponse
     {
         Auth::guard('web')->logout();
-
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
-
-        return redirect('/');
+        return redirect('/login');
     }
 }

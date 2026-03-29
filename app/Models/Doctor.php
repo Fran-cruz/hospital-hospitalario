@@ -9,6 +9,12 @@ class Doctor extends Model
 {
     /** @use HasFactory<\Database\Factories\DoctorFactory> */
     use HasFactory;
+    protected $fillable = [
+        'user_id',
+        'license_number',
+        'bio',
+        // 'active' si lo tienes
+    ];
 
     // Funciones para las Relaciones
     public function user()

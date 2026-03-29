@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -41,6 +42,14 @@ class RegisteredUserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'role' => 'patient',
+        ]);
+
+        Patient::create([
+            'user_id' => $user->id,
+            'phone' => $request->phone ?? null,
+            'birth_date' => $request->birth_date ?? null,
+            'gender' => $request->gender ?? null,
         ]);
 
         event(new Registered($user));

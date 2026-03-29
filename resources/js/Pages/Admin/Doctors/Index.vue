@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import Modal from '@/Components/Modal.vue'
 import { ref } from 'vue'
-import { useForm, router } from '@inertiajs/vue3'
+import { useForm, router, Link } from '@inertiajs/vue3'
 
 const props = defineProps({
     doctors:    Array,   // [{ id, name, email, license_number, bio, specialities[], active }]

@@ -13,17 +13,16 @@ class AppointmentApiController extends Controller
 
     /**
      * GET /api/availability?reason_id=&from=&to=
-     * Devuelve preview de médicos disponibles para el frontend del paciente.
      */
     public function availability(Request $request)
     {
         $request->validate([
             'reason_id' => 'required|exists:appointment_reasons,id',
-            'from'      => 'required|date|after_or_equal:today',
+            'from'      => 'required|date',
             'to'        => 'required|date|after:from',
         ]);
 
-        $reason = AppointmentReason::findOrFail($request->reason_id);
+        $reason = AppointmentReason::with('speciality')->findOrFail($request->reason_id);
 
         $preview = $this->service->getAvailabilityPreview(
             $reason->speciality_id,

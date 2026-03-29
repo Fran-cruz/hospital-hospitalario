@@ -10,6 +10,14 @@ class Patient extends Model
     /** @use HasFactory<\Database\Factories\PatientFactory> */
     use HasFactory;
 
+    protected $fillable = [
+        'user_id',
+        'phone',
+        'birth_date',
+        'gender',
+        // Agrega aquí cualquier otro campo que tengas en la tabla patients
+    ];
+
     // Funciones para las Relaciones
     public function user()
     {

@@ -11,26 +11,31 @@ class DoctorAppointmentController extends Controller
     {
         $doctor = auth()->user()->doctor;
 
+        if (!$doctor) {
+            abort(403, 'No tienes un perfil de médico asociado.');
+        }
+
         $appointments = $doctor->appointments()
             ->with(['patient.user', 'reason.speciality'])
-            ->where('status', '!=', 'cancelled')
+            ->whereIn('status', ['pending', 'confirmed'])
             ->orderBy('start_time')
             ->get()
             ->map(fn($a) => [
                 'id'           => $a->id,
-                'title'        => $a->patient->user->name,
-                'start'        => $a->start_time,
-                'end'          => $a->end_time,
+                // Campos que FullCalendar necesita
+                'start' => \Carbon\Carbon::parse($a->start_time)->toIso8601String(), // parsing to ISO to avoid FullCalendar errors
+                'end' => \Carbon\Carbon::parse($a->end_time)->toIso8601String(),
+                // Campos para el modal
                 'status'       => $a->status,
+                'patient_name' => $a->patient->user->name,
                 'reason'       => $a->reason->name,
                 'speciality'    => $a->reason->speciality->name,
-                'patient_name' => $a->patient->user->name,
                 'notes'        => $a->notes,
             ]);
 
         return inertia('Doctor/Appointments/Index', [
-            'appointments' => $appointments,
-            'whatsapp_number' => config('clinic.admin_whatsapp', '+50498765432'),
+            'appointments'    => $appointments,
+            'whatsapp_number' => config('clinic.admin_whatsapp', '50494599288'),
         ]);
     }
 
@@ -42,7 +47,7 @@ class DoctorAppointmentController extends Controller
 
         return inertia('Doctor/Appointments/Show', [
             'appointment'     => $appointment,
-            'whatsapp_number' => config('clinic.admin_whatsapp', '+50498765432'),
+            'whatsapp_number' => config('clinic.admin_whatsapp', '50494599288'),
         ]);
     }
 }

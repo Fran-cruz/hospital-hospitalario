@@ -7,6 +7,7 @@ use App\Models\Appointment;
 use App\Models\AppointmentReason;
 use App\Services\AppointmentService;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class PatientAppointmentController extends Controller
 {
@@ -41,9 +42,10 @@ class PatientAppointmentController extends Controller
             ->orderBy('name')
             ->get()
             ->map(fn($r) => [
-                'id'       => $r->id,
-                'name'     => $r->name,
-                'speciality'=> $r->speciality->name,
+                'id'           => $r->id,
+                'name'         => $r->name,
+                'speciality_id' => $r->speciality_id,
+                'speciality'    => $r->speciality->name, // string plano, no objeto
             ]);
 
         return inertia('Patient/Appointments/Create', compact('reasons'));
@@ -55,24 +57,36 @@ class PatientAppointmentController extends Controller
         $request->validate([
             'reason_id' => 'required|exists:appointment_reasons,id',
             'from'      => 'required|date|after_or_equal:today',
-            'to'        => 'required|date|after:from',
+            'to'        => 'required|date|after_or_equal:from',
+        ], [
+            'from.after_or_equal' => 'La fecha de inicio no puede ser anterior a hoy.',
+            'to.after_or_equal'   => 'La fecha de fin no puede ser anterior a la fecha de inicio.',
+            'to.date'             => 'La fecha de fin no es válida.',
+            'reason_id.required'  => 'Debes seleccionar un motivo de consulta.',
+            'reason_id.exists'    => 'El motivo seleccionado no es válido.',
         ]);
+
+        $patient = auth()->user()->patient
+            ?? Patient::firstOrCreate(['user_id' => auth()->id()]);
+
+        $from = Carbon::parse($request->from)->startOfDay();
+        $to   = Carbon::parse($request->to)->endOfDay();
 
         try {
             $appointment = $this->service->createPendingAppointment(
-                auth()->user()->patient,
+                $patient,
                 $request->reason_id,
-                $request->from,
-                $request->to
+                $from,
+                $to
             );
 
             return redirect()
                 ->route('patient.appointments.show', $appointment->id)
                 ->with('success', '¡Cita solicitada! Quedó en estado Pendiente.');
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return back()->withErrors([
-                'availability' => 'No hay disponibilidad en el rango seleccionado. Intenta ampliar las fechas o contacta al administrador.'
+                'availability' => 'No hay disponibilidad en el rango seleccionado. Intenta ampliar las fechas o contacta al administrador.',
             ]);
         }
     }
@@ -126,28 +140,35 @@ class PatientAppointmentController extends Controller
         $request->validate([
             'reason_id' => 'required|exists:appointment_reasons,id',
             'from'      => 'required|date|after_or_equal:today',
-            'to'        => 'required|date|after:from',
+            'to'        => 'required|date|after_or_equal:from',
+        ], [
+            'from.after_or_equal' => 'La fecha de inicio no puede ser anterior a hoy.',
+            'to.after_or_equal'   => 'La fecha de fin no puede ser anterior a la fecha de inicio.',
+            'reason_id.required'  => 'Debes seleccionar un motivo de consulta.',
         ]);
 
-        // Cancelar la cita actual
-        $appointment->update(['status' => 'cancelled']);
+        $patient = auth()->user()->patient
+            ?? Patient::firstOrCreate(['user_id' => auth()->id()]);
+
+        $from = Carbon::parse($request->from)->startOfDay();
+        $to   = Carbon::parse($request->to)->endOfDay();
 
         try {
-            $new = $this->service->createPendingAppointment(
-                auth()->user()->patient,
+            $new = $this->service->reprogramAppointment(
+                $appointment,
+                $patient,
                 $request->reason_id,
-                $request->from,
-                $request->to
+                $from,
+                $to
             );
 
             return redirect()
                 ->route('patient.appointments.show', $new->id)
-                ->with('success', 'Cita reprogramada. Nueva cita en estado Pendiente.');
+                ->with('success', 'Cita reprogramada exitosamente.');
 
-        } catch (\Exception $e) {
-            // Restaurar si falló (opcional: mantenerla cancelada y avisar)
+        } catch (\Throwable $e) {
             return back()->withErrors([
-                'availability' => 'No se encontró disponibilidad para reprogramar. Contacta al administrador.'
+                'availability' => 'No se encontró disponibilidad para reprogramar.',
             ]);
         }
     }

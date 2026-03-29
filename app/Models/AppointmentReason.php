@@ -2,17 +2,19 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class AppointmentReason extends Model
 {
-    /** @use HasFactory<\Database\Factories\AppointmentReasonFactory> */
-    use HasFactory;
+    protected $fillable = ['name', 'speciality_id'];
 
-    // Funciones para las Relaciones
     public function speciality()
     {
         return $this->belongsTo(Speciality::class);
+    }
+
+    public function appointments()
+    {
+        return $this->hasMany(Appointment::class);
     }
 }
