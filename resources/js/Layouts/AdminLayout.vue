@@ -22,15 +22,15 @@ const nav = [
         <!-- Sidebar -->
         <aside :class="[
     'flex flex-col bg-gray-900 text-white transition-all duration-300',
-    open ? 'w-60' : 'w-16'
+    open ? 'w-64' : 'w-20'
   ]">
 
             <!-- Logo / toggle -->
             <div class="flex items-center justify-between px-4 py-5 border-b border-gray-700">
-                <span v-if="open" class="font-bold text-lg tracking-wide">🏨 Clínica</span>
+                <span v-if="open" class="font-bold text-lg tracking-wide">🏨Hospital Hospitalario</span>
                 <button @click="open = !open"
                         class="ml-auto text-gray-400 hover:text-white transition text-xl leading-none">
-                    {{ open ? '←' : '→' }}
+                    {{ open ? '<' : '🏨 >' }}
                 </button>
             </div>
 
@@ -47,7 +47,10 @@ const nav = [
             : 'text-gray-300 hover:bg-gray-700'
         ]"
                 >
-                    <span class="text-lg">{{ item.icon }}</span>
+                    <div v-if="!open">
+                        <span class="text-lg">{{ item.icon }}</span>
+                    </div>
+                    <span v-if="open" class="text-lg">{{ item.icon }}</span>
                     <span v-if="open">{{ item.label }}</span>
                 </Link>
             </nav>
