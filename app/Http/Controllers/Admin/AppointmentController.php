@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\Appointment;
 use App\Models\Doctor;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class AppointmentController extends Controller
@@ -13,30 +14,34 @@ class AppointmentController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Appointment::with(['patient.user', 'doctor.user', 'reason.speciality'])
-            ->when($request->status,    fn($q) => $q->where('status', $request->status))
+        $appointments = Appointment::with(['patient.user', 'doctor.user', 'reason.speciality'])
+            ->when($request->status, fn($q) => $q->where('status', $request->status))
             ->when($request->doctor_id, fn($q) => $q->where('doctor_id', $request->doctor_id))
-            ->when($request->from,      fn($q) => $q->whereDate('start_time', '>=', $request->from))
-            ->when($request->to,        fn($q) => $q->whereDate('start_time', '<=', $request->to))
-            ->latest('start_time')
+            ->when($request->from, fn($q) => $q->whereDate('start_time', '>=', $request->from))
+            ->when($request->to, fn($q) => $q->whereDate('start_time', '<=', $request->to))
+            ->orderBy('start_time')
             ->get()
             ->map(fn($a) => [
-                'id'         => $a->id,
-                'start_time' => $a->start_time,
-                'end_time'   => $a->end_time,
-                'status'     => $a->status,
-                'notes'      => $a->notes,
-                'patient'    => $a->patient->user->name,
-                'doctor'     => $a->doctor->user->name,
-                'speciality'  => $a->reason->speciality->name,
-                'reason'     => $a->reason->name,
+                'id'            => $a->id,
+                'start_time'    => $a->start_time ? Carbon::parse($a->start_time)->format('d/m/Y H:i') : null,
+                'end_time'      => $a->end_time ? Carbon::parse($a->end_time)->format('d/m/Y H:i') : null,
+                'start_raw'     => $a->start_time,                    // Para FullCalendar si lo necesitas
+                'status'        => $a->status,
+                'notes'        => $a->notes,
+                'patient' => $a->patient->user->name,
+                'doctor'  => $a->doctor->user->name,
+                'speciality'   => $a->reason->speciality->name,
+                'reason'       => $a->reason->name,
             ]);
 
         $doctors = Doctor::with('user')->get()
-            ->map(fn($d) => ['id' => $d->id, 'name' => $d->user->name]);
+            ->map(fn($d) => [
+                'id' => $d->id,
+                'name' => $d->user->name,
+            ]);
 
         return inertia('Admin/Appointments/Index', [
-            'appointments' => $query,
+            'appointments' => $appointments,
             'doctors'      => $doctors,
             'filters'      => $request->only(['status', 'doctor_id', 'from', 'to']),
         ]);

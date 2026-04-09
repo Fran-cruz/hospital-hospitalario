@@ -2,18 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\Appointment;
+use App\Http\Controllers\Controller;
 use App\Models\Doctor;
 use App\Models\Speciality;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class DoctorController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    // app/Http/Controllers/Admin/DoctorController.php
-
     public function index()
     {
         $doctors = Doctor::with(['user', 'specialities'])->get()->map(fn($d) => [
@@ -23,12 +21,106 @@ class DoctorController extends Controller
             'license_number' => $d->license_number,
             'bio'            => $d->bio,
             'active'         => $d->user->active,
-            'specialities'    => $d->specialities->map(fn($s) => ['id' => $s->id, 'name' => $s->name]),
+            'specialities'   => $d->specialities->map(fn($s) => [
+                'id'   => $s->id,
+                'name' => $s->name,
+            ]),
         ]);
 
         $specialities = Speciality::orderBy('name')->get(['id', 'name']);
 
         return inertia('Admin/Doctors/Index', compact('doctors', 'specialities'));
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name'           => 'required|string|max:255',
+            'email'          => 'required|email|unique:users,email',
+            'password'       => 'required|string|min:8',
+            'license_number' => 'required|string|unique:doctors,license_number',
+            'bio'            => 'nullable|string',
+            'specialities'   => 'required|array|min:1',
+            'specialities.*' => 'exists:specialities,id',
+            'active'         => 'boolean',
+        ], [
+            'license_number.unique' => 'Ya existe un médico con ese número de licencia.',
+            'specialities.required' => 'Debes asignar al menos una especialidad.',
+            'email.unique'          => 'Este correo ya está registrado.',
+        ]);
+
+        $user = User::create([
+            'name'     => $request->name,
+            'email'    => $request->email,
+            'password' => Hash::make($request->password),
+            'role'     => 'doctor',
+            'active'   => $request->boolean('active', true),
+        ]);
+
+        $doctor = Doctor::create([
+            'user_id'        => $user->id,
+            'license_number' => $request->license_number,
+            'bio'            => $request->bio,
+        ]);
+
+        $doctor->specialities()->attach($request->specialities);
+
+        return back()->with('success', 'Médico creado correctamente.');
+    }
+
+    public function update(Request $request, Doctor $doctor)
+    {
+        if ($request->has('active') && !$request->hasAny([
+                'name', 'email', 'password', 'license_number', 'bio', 'specialities'
+            ])) {
+            $doctor->user->update([
+                'active' => $request->boolean('active'),
+            ]);
+
+            return back()->with('success', 'Estado del médico actualizado.');
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($doctor->user_id)],
+            'password' => ['nullable', 'string', 'min:8'],
+            'license_number' => ['required', 'string', 'max:255'],
+            'bio' => ['nullable', 'string'],
+            'specialities' => ['required', 'array'],
+            'specialities.*' => ['exists:specialities,id'],
+            'active' => ['nullable', 'boolean'],
+            ]);
+
+        $doctor->user->update([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'active' => $request->boolean('active'),
+            ...(!empty($validated['password']) ? ['password' => bcrypt($validated['password'])] : []),
+        ]);
+
+        $doctor->update([
+            'license_number' => $validated['license_number'],
+            'bio' => $validated['bio'] ?? null,
+        ]);
+
+        $doctor->specialities()->sync($validated['specialities']);
+
+        return back()->with('success', 'Médico actualizado correctamente.');
+    }
+    public function destroy(Doctor $doctor)
+    {
+        if ($doctor->appointments()->whereIn('status', ['pending', 'confirmed'])->exists()) {
+            return back()->withErrors([
+                'delete' => 'No se puede eliminar: el médico tiene citas activas.'
+            ]);
+        }
+
+        $user = $doctor->user;
+        $doctor->specialities()->detach();
+        $doctor->delete();
+        $user->delete();
+
+        return back()->with('success', 'Médico eliminado correctamente.');
     }
 
     public function schedule(Doctor $doctor)
@@ -37,7 +129,7 @@ class DoctorController extends Controller
 
         $appointments = $doctor->appointments()
             ->with(['patient.user', 'reason.speciality'])
-            ->where('status', '!=', 'cancelled')
+            ->whereIn('status', ['pending', 'confirmed'])
             ->get()
             ->map(fn($a) => [
                 'id'           => $a->id,
@@ -46,7 +138,7 @@ class DoctorController extends Controller
                 'status'       => $a->status,
                 'patient_name' => $a->patient->user->name,
                 'reason'       => $a->reason->name,
-                'speciality'    => $a->reason->speciality->name,
+                'speciality'   => $a->reason->speciality->name,
                 'notes'        => $a->notes,
             ]);
 
@@ -54,73 +146,9 @@ class DoctorController extends Controller
             'doctor' => [
                 'id'          => $doctor->id,
                 'name'        => $doctor->user->name,
-                'specialities' => $doctor->specialities,
+                'specialities'=> $doctor->specialities,
             ],
             'appointments' => $appointments,
         ]);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        // Idea vaga del STORE
-//        $exists = Appointment::where('doctor_id', $doctorId)
-//            ->where('status', '!=', 'cancelled')
-//            ->where(function ($q) use ($start, $end) {
-//                $q->whereBetween('start_time', [$start, $end])
-//                    ->orWhereBetween('end_time', [$start, $end])
-//                    ->orWhere(function ($q2) use ($start, $end) {
-//                        $q2->where('start_time', '<=', $start)
-//                            ->where('end_time', '>=', $end);
-//                    });
-//            })->exists();
-//
-//        if ($exists) {
-//            throw ValidationException::withMessages([
-//                'time' => 'El médico ya tiene cita en ese horario.'
-//            ]);
-//        }
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Appointment $appointment)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Appointment $appointment)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Appointment $appointment)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Appointment $appointment)
-    {
-        //
     }
 }

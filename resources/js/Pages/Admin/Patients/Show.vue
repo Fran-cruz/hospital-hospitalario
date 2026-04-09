@@ -43,7 +43,7 @@ const props = defineProps({
                 <tbody class="divide-y divide-gray-100">
                 <tr v-for="a in patient.appointments" :key="a.id" class="hover:bg-gray-50">
                     <td class="px-4 py-3 text-gray-700 whitespace-nowrap">
-                        {{ new Date(a.start_time).toLocaleString('es-HN') }}
+                        {{ a.start_time }}
                     </td>
                     <td class="px-4 py-3 text-gray-700">{{ a.doctor }}</td>
                     <td class="px-4 py-3 text-gray-500">{{ a.speciality }}</td>

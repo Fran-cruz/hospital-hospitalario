@@ -15,7 +15,8 @@ use App\Http\Controllers\Patient\PatientAppointmentController;
 use Inertia\Inertia;
 
 // ── Raíz ─────────────────────────────────────────────────────────────────
-Route::get('/', fn() => redirect('login'));
+//Route::get('/', fn() => redirect('login'));
+Route::get('/', fn() => Inertia::render('Landing'));
 
 // ── Redirección por rol tras login ────────────────────────────────────────
 Route::middleware('auth')->get('/dashboard', function () {
