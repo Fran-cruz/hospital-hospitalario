@@ -1,106 +1,137 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { Link, usePage } from '@inertiajs/vue3'
+import { Link, usePage, router } from '@inertiajs/vue3'
 
-const page   = usePage()
-const user   = computed(() => page.props.auth.user)
-const open   = ref(true)
+const page  = usePage()
+const user  = computed(() => page.props.auth.user)
+const rail  = ref(false)  // sidebar colapsado
 
 const nav = [
-    { label: 'Dashboard',    icon: '📊', route: 'admin.dashboard' },
-    { label: 'Médicos',      icon: '👨‍⚕️', route: 'admin.doctors.index' },
-    { label: 'Pacientes',    icon: '🧑‍🤝‍🧑', route: 'admin.patients.index' },
-    { label: 'Especialidades', icon: '🏥', route: 'admin.specialities.index' },
-    { label: 'Motivos',      icon: '📋', route: 'admin.reasons.index' },
-    { label: 'Citas',        icon: '📅', route: 'admin.appointments.index' },
+    { label: 'Dashboard',      icon: 'mdi-view-dashboard',       route: 'admin.dashboard'          },
+    { label: 'Médicos',        icon: 'mdi-doctor',               route: 'admin.doctors.index'      },
+    { label: 'Pacientes',      icon: 'mdi-account-group',        route: 'admin.patients.index'     },
+    { label: 'Especialidades', icon: 'mdi-hospital-building',    route: 'admin.specialities.index' },
+    { label: 'Motivos',        icon: 'mdi-clipboard-list',       route: 'admin.reasons.index'      },
+    { label: 'Citas',          icon: 'mdi-calendar-clock',       route: 'admin.appointments.index' },
 ]
+
+const logout = () => router.post(route('logout'))
+
+const isActive = (routeName) => route().current(routeName)
 </script>
 
 <template>
-    <div class="flex min-h-screen bg-gray-100 font-sans">
+    <v-app>
 
         <!-- Sidebar -->
-        <aside :class="[
-    'flex flex-col bg-gray-900 text-white transition-all duration-300',
-    open ? 'w-64' : 'w-20'
-  ]">
+        <v-navigation-drawer
+            v-model:rail="rail"
+            permanent
+            :width="240"
+            :railWidth="60"
+            color="grey-darken-3"
+        >
+            <!-- Logo -->
+            <v-list nav>
+            <v-list-item
+                prepend-icon="mdi-hospital-box"
+                nav
+                class=""
+                @click="rail = !rail"
+            >
+                <v-label v-if="!rail">Medi Plus</v-label>
+                <template #append>
+                    <v-btn
+                        :icon="rail ? 'mdi-chevron-right' : 'mdi-chevron-left'"
+                        variant="text"
+                        color="white"
+                        size="small"
+                    />
+                </template>
+            </v-list-item>
+            </v-list>
+            <v-divider />
 
-            <!-- Logo / toggle -->
-            <div class="flex items-center justify-between px-4 py-5 border-b border-gray-700">
-                <span v-if="open" class="font-bold text-lg tracking-wide">🏨Hospital Hospitalario</span>
-                <button @click="open = !open"
-                        class="ml-auto text-gray-400 hover:text-white transition text-xl leading-none">
-                    {{ open ? '<' : '🏨 >' }}
-                </button>
-            </div>
-
-            <!-- Nav -->
-            <nav class="flex-1 py-4 space-y-1 px-2">
+            <!-- Navegación -->
+            <v-list density="compact" nav class="mt-2">
                 <Link
                     v-for="item in nav"
                     :key="item.route"
                     :href="route(item.route)"
-                    :class="[
-          'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition',
-          $page.url.startsWith('/' + item.route.replace('admin.','').replace('.index',''))
-            ? 'bg-blue-600 text-white font-semibold'
-            : 'text-gray-300 hover:bg-gray-700'
-        ]"
                 >
-                    <div v-if="!open">
-                        <span class="text-lg">{{ item.icon }}</span>
-                    </div>
-                    <span v-if="open" class="text-lg">{{ item.icon }}</span>
-                    <span v-if="open">{{ item.label }}</span>
+                    <v-list-item
+                        :prepend-icon="item.icon"
+                        :title="item.label"
+                        :active="isActive(item.route)"
+                        rounded="lg"
+                        class="mb-1"
+                    />
                 </Link>
-            </nav>
+            </v-list>
 
-            <!-- User -->
-            <div class="border-t border-gray-700 px-4 py-4">
-                <div v-if="open" class="text-xs text-gray-400 mb-1 truncate">{{ user.email }}</div>
-                <Link
-                    href="/logout"
-                    method="post"
-                    as="button"
-                    class="flex items-center gap-2 text-sm text-gray-300 hover:text-red-400 transition"
+            <template #append>
+                <v-divider />
+                <v-list density="compact" nav class="mb-2 mt-1">
+                    <v-list-item
+                        v-if="!rail"
+                        :subtitle="user?.email"
+                        :title="user?.name"
+                        prepend-icon="mdi-account-circle"
+                    />
+                    <v-list-item
+                        prepend-icon="mdi-logout"
+                        title="Cerrar sesión"
+                        rounded="lg"
+                        class="text-red-400 hover:bg-red-950 cursor-pointer"
+                        @click="logout"
+                    />
+                </v-list>
+            </template>
+        </v-navigation-drawer>
+
+        <!-- Top bar -->
+        <v-app-bar elevation="1" color="white">
+            <v-app-bar-title>
+            <span class="font-semibold text-gray-800">
+                <slot name="title">Panel Administrador</slot>
+            </span>
+                <span v-if="$slots.subtitle" class="text-sm text-gray-400 ml-2">
+                <slot name="subtitle" />
+            </span>
+            </v-app-bar-title>
+            <template #append>
+                <span class="text-sm text-gray-500 mr-4">{{ user?.name }}</span>
+            </template>
+        </v-app-bar>
+
+        <!-- Contenido -->
+        <v-main>
+            <!-- Flash messages -->
+            <div class="px-6 pt-4">
+                <v-alert
+                    v-if="$page.props.flash?.success"
+                    type="success"
+                    variant="tonal"
+                    closable
+                    class="mb-0"
                 >
-                    <span>🚪</span>
-                    <span v-if="open">Cerrar sesión</span>
-                </Link>
-            </div>
-        </aside>
-
-        <!-- Contenido principal -->
-        <div class="flex-1 flex flex-col overflow-hidden">
-
-            <!-- Topbar -->
-            <header class="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
-                <div>
-                    <h1 class="text-lg font-semibold text-gray-800">
-                        <slot name="title">Panel Administrador</slot>
-                    </h1>
-                    <p v-if="$slots.subtitle" class="text-sm text-gray-400">
-                        <slot name="subtitle" />
-                    </p>
-                </div>
-                <div class="text-sm text-gray-500">{{ user.name }}</div>
-            </header>
-
-            <!-- Flash -->
-            <div v-if="$page.props.flash?.success"
-                 class="mx-6 mt-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
-                ✅ {{ $page.props.flash.success }}
-            </div>
-            <div v-if="$page.props.flash?.error"
-                 class="mx-6 mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                ❌ {{ $page.props.flash.error }}
+                    {{ $page.props.flash.success }}
+                </v-alert>
+                <v-alert
+                    v-if="$page.props.flash?.error"
+                    type="error"
+                    variant="tonal"
+                    closable
+                    class="mb-0"
+                >
+                    {{ $page.props.flash.error }}
+                </v-alert>
             </div>
 
-            <!-- Page content -->
-            <main class="flex-1 overflow-y-auto p-6">
+            <v-container fluid class="pa-6">
                 <slot />
-            </main>
+            </v-container>
+        </v-main>
 
-        </div>
-    </div>
+    </v-app>
 </template>

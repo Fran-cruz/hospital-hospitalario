@@ -92,7 +92,7 @@ const clearFilters = () => {
                 <tbody class="divide-y divide-gray-100">
                 <tr v-for="a in appointments" :key="a.id" class="hover:bg-gray-50">
                     <td class="px-4 py-3 text-gray-700 whitespace-nowrap">
-                        {{ new Date(a.start_time).toLocaleString('es-HN') }}
+                        {{ a.start_time }}
                     </td>
                     <td class="px-4 py-3 font-medium text-gray-800">{{ a.patient }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ a.doctor }}</td>
@@ -134,11 +134,11 @@ const clearFilters = () => {
                 </div>
                 <div class="flex justify-between border-b pb-2">
                     <span class="font-medium text-gray-500">Inicio</span>
-                    <span>{{ new Date(detail.start_time).toLocaleString('es-HN') }}</span>
+                    <span>{{ detail.start_time }}</span>
                 </div>
                 <div class="flex justify-between border-b pb-2">
                     <span class="font-medium text-gray-500">Fin</span>
-                    <span>{{ new Date(detail.end_time).toLocaleString('es-HN') }}</span>
+                    <span>{{ detail.end_time }}</span>
                 </div>
                 <div class="flex justify-between border-b pb-2">
                     <span class="font-medium text-gray-500">Estado</span>

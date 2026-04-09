@@ -38,12 +38,17 @@ const openEdit = (doc) => {
     form.license_number = doc.license_number
     form.bio            = doc.bio
     form.specialities    = doc.specialities.map(s => s.id)
-    form.active         = doc.active
+    form.active         = !!doc.active
     isEditing.value     = true
     showModal.value     = true
 }
 
 const submit = () => {
+    form.transform((data) => ({
+        ...data,
+        active: !!form.active,
+    }))
+
     if (isEditing.value) {
         form.put(route('admin.doctors.update', form.id), {
             onSuccess: () => { showModal.value = false }
@@ -189,8 +194,15 @@ const toggleActive = (doc) => {
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <input type="checkbox" id="active" v-model="form.active" class="rounded border-gray-300 text-blue-600" />
-                    <label for="active" class="text-sm text-gray-700">Médico activo</label>
+                    <v-switch
+                        v-model="form.active"
+                        label="Médico activo"
+                        :true-value="true"
+                        :false-value="false"
+                        color="success"
+                        inset
+                        hide-details
+                    />
                 </div>
 
                 <div class="flex justify-end gap-3 pt-2">
