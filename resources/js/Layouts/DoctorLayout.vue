@@ -22,7 +22,11 @@ const isActive = (routeName) => route().current(routeName)
             permanent
             :width="240"
             :rail-width="60"
+<<<<<<< HEAD
             color="blue-darken-4"
+=======
+            color="teal-darken-4"
+>>>>>>> 184e279 (refactor: Actualizar layout del doctor con Vuetify)
         >
             <!-- Logo -->
             <v-list nav>
