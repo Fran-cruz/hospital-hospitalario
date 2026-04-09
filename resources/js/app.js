@@ -1,38 +1,27 @@
-import './bootstrap';
-import '../css/app.css';
+import './bootstrap'
+import '../css/app.css'
 
-import { createApp, h } from 'vue';
-import { createInertiaApp } from '@inertiajs/vue3';
-import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import { ZiggyVue } from '../../vendor/tightenco/ziggy';
-import VueApexCharts from 'vue3-apexcharts'
-
-import vuetify from './Plugins/vuetify';
-import Modal from "@/Components/Modal.vue";
-
-const appName = import.meta.env.VITE_APP_NAME || 'Hospital Hospitalario';
+import { createApp, h }       from 'vue'
+import { createInertiaApp }   from '@inertiajs/vue3'
+import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
+import { ZiggyVue }           from '../../vendor/tightenco/ziggy'
+import vuetify                from './plugins/vuetify'
 
 createInertiaApp({
-    title: (title) => `${title} - ${appName}`,
-
+    title: (title) => `${title} — Medi Plus`,
     resolve: (name) =>
         resolvePageComponent(
             `./Pages/${name}.vue`,
             import.meta.glob('./Pages/**/*.vue')
         ),
-
     setup({ el, App, props, plugin }) {
-        return createApp({ render: () => h(App, props) })
-            .use(plugin)   // Inertia plugin
-            .use(ZiggyVue) // Ziggy for Laravel named routes
-            // .use(vuetify)  // Vuetify plugin
-            .use(VueApexCharts) // ApexCharts plugin
-            .component('Modal', Modal)   // ← ADD THIS LINE
-            .mount(el);
+        createApp({ render: () => h(App, props) })
+            .use(plugin)
+            .use(ZiggyVue)
+            .use(vuetify)       // ← Vuetify aquí
+            .mount(el)
     },
-
     progress: {
-        color: '#4B5563',
-        showSpinner: true,
+        color: '#4f46e5',
     },
-});
+})

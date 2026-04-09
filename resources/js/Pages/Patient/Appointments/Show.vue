@@ -80,13 +80,13 @@ const submitReprogram = () => {
                 <!-- Confirmar -->
                 <button @click="doConfirm" :disabled="confirmForm.processing"
                         class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-50">
-                    ✅ Confirmar esta cita
+                     Confirmar esta cita
                 </button>
 
                 <!-- Reprogramar toggle -->
                 <button @click="showReprogram = !showReprogram"
                         class="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2">
-                    🔁 {{ showReprogram ? 'Cancelar reprogramación' : 'Reprogramar' }}
+                     {{ showReprogram ? 'Cancelar reprogramación' : 'Reprogramar' }}
                 </button>
 
                 <!-- Panel reprogramar -->
@@ -124,7 +124,7 @@ const submitReprogram = () => {
                 <!-- Cancelar -->
                 <button @click="doCancel" :disabled="cancelForm.processing"
                         class="w-full border border-red-300 text-red-600 hover:bg-red-50 font-semibold py-3 rounded-xl transition disabled:opacity-50">
-                    ❌ Cancelar cita
+                    Cancelar cita
                 </button>
             </div>
 
