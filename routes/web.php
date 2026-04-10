@@ -62,6 +62,8 @@ Route::middleware(['auth', 'role:admin'])
         // Citas (solo lectura + filtros)
         Route::get('appointments',       [AdminAppointmentController::class, 'index'])->name('appointments.index');
         Route::get('appointments/{appointment}', [AdminAppointmentController::class, 'show'])->name('appointments.show');
+        Route::post('appointments/{appointment}/cancel', [AdminAppointmentController::class, 'cancel'])->name('appointments.cancel');
+        Route::post('appointments/{appointment}/reprogram', [AdminAppointmentController::class, 'reprogram'])->name('appointments.reprogram');
     });
 
 // ── DOCTOR ────────────────────────────────────────────────────────────────

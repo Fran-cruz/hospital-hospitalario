@@ -13,6 +13,12 @@ const props = defineProps({
 })
 
 const detail  = ref(null)
+const reprogram = ref(null)
+const reprogramForm = reactive({
+    start_time: '',
+    end_time: '',
+    notes: '',
+})
 
 const f = reactive({
     status:    props.filters?.status    ?? '',
@@ -27,6 +33,20 @@ const applyFilters = () =>
 const clearFilters = () => {
     f.status = ''; f.doctor_id = ''; f.from = ''; f.to = ''
     applyFilters()
+}
+
+const openReprogramModal = (appointment) => {
+    reprogram.value = appointment
+    reprogramForm.start_time = appointment.start_time
+    reprogramForm.end_time = appointment.end_time
+    reprogramForm.notes = appointment.notes
+}
+
+const closeReprogramModal = () => {
+    reprogram.value = null
+    reprogramForm.start_time = ''
+    reprogramForm.end_time = ''
+    reprogramForm.notes = ''
 }
 </script>
 
@@ -86,7 +106,7 @@ const clearFilters = () => {
                     <th class="px-4 py-3 text-left font-semibold text-gray-600">Especialidad</th>
                     <th class="px-4 py-3 text-left font-semibold text-gray-600">Motivo</th>
                     <th class="px-4 py-3 text-center font-semibold text-gray-600">Estado</th>
-                    <th class="px-4 py-3 text-center font-semibold text-gray-600">Detalle</th>
+                    <th class="px-4 py-3 text-center font-semibold text-gray-600">Acciones</th>
                 </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -102,8 +122,10 @@ const clearFilters = () => {
                     <td class="px-4 py-3 text-gray-500">{{ a.reason }}</td>
                     <td class="px-4 py-3 text-center"><StatusBadge :status="a.status" /></td>
                     <td class="px-4 py-3 text-center">
-                        <button @click="detail = a"
-                                class="text-blue-600 hover:text-blue-800 text-xs font-medium">Ver</button>
+                        <button @click="openReprogramModal(a)"
+                                class="text-blue-600 hover:text-blue-800 text-xs font-medium mr-2">Reprogramar</button>
+                        <button @click="$inertia.post(route('admin.appointments.cancel', a.id))"
+                                class="text-red-600 hover:text-red-800 text-xs font-medium">Cancelar</button>
                     </td>
                 </tr>
                 <tr v-if="!appointments.length">
@@ -148,6 +170,51 @@ const clearFilters = () => {
                     <span class="font-medium text-gray-500">Notas</span>
                     <p class="mt-1 text-gray-600 italic">{{ detail.notes }}</p>
                 </div>
+            </div>
+        </Modal>
+
+        <!-- Modal reprogramar -->
+        <Modal :show="!!reprogram" title="Reprogramar cita" max-width="max-w-md" @close="closeReprogramModal">
+            <div v-if="reprogram" class="space-y-3 text-sm text-gray-700">
+                <div class="flex justify-between border-b pb-2">
+                    <span class="font-medium text-gray-500">Paciente</span>
+                    <span>{{ reprogram.patient }}</span>
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <span class="font-medium text-gray-500">Médico</span>
+                    <span>{{ reprogram.doctor }}</span>
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <span class="font-medium text-gray-500">Especialidad</span>
+                    <span>{{ reprogram.speciality }}</span>
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <span class="font-medium text-gray-500">Motivo</span>
+                    <span>{{ reprogram.reason }}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Desde</label>
+                        <input type="datetime-local" v-model="reprogramForm.start_time"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Hasta</label>
+                        <input type="datetime-local" v-model="reprogramForm.end_time"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Notas</label>
+                    <textarea v-model="reprogramForm.notes"
+                              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
+                </div>
+                <p v-if="$page.props.errors.availability"
+                   class="text-red-600 text-xs">{{ $page.props.errors.availability }}</p>
+                <button @click="$inertia.post(route('admin.appointments.reprogram', reprogram.id), reprogramForm, { onSuccess: () => closeReprogramModal() })"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-medium transition">
+                    Reprogramar cita
+                </button>
             </div>
         </Modal>
 
