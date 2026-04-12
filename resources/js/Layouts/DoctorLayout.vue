@@ -22,7 +22,7 @@ const isActive = (routeName) => route().current(routeName)
             permanent
             :width="240"
             :rail-width="60"
-            color="blue-darken-4" <!-- Cambio de color aquí -->
+            color="blue-darken-4"
         >
             <!-- Logo -->
             <v-list nav>
