@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Appointment;
+use App\Models\Doctor;
 use App\Models\Patient;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class PatientController extends Controller
@@ -34,6 +36,12 @@ class PatientController extends Controller
     public function show(Patient $patient)
     {
         $patient->load(['user', 'appointments.doctor.user', 'appointments.reason.speciality']);
+        $doctors = Doctor::with('user')
+            ->get()
+            ->map(fn($doctor) => [
+                'id' => $doctor->id,
+                'name' => $doctor->user->name,
+            ]);
 
         $data = [
             'id'         => $patient->id,
@@ -42,17 +50,33 @@ class PatientController extends Controller
             'phone'      => $patient->phone,
             'birth_date' => $patient->birth_date,
             'gender'     => $patient->gender,
-            'appointments' => $patient->appointments->map(fn($a) => [
-                'id'         => $a->id,
-                'start_time' => $a->start_time,
-                'status'     => $a->status,
-                'doctor'     => $a->doctor->user->name,
-                'speciality'  => $a->reason->speciality->name,
-                'reason'     => $a->reason->name,
-            ]),
+            'appointments' => $patient->appointments
+                ->sortBy('start_time')
+                ->values()
+                ->map(function ($appointment) {
+                    $start = Carbon::parse($appointment->start_time);
+                    $end = Carbon::parse($appointment->end_time);
+
+                    return [
+                        'id' => $appointment->id,
+                        'start_time' => $start->format('d/m/Y H:i'),
+                        'end_time' => $end->format('d/m/Y H:i'),
+                        'start_raw' => $start->toDateTimeString(),
+                        'end_raw' => $end->toDateTimeString(),
+                        'status' => $appointment->status,
+                        'doctor' => $appointment->doctor->user->name,
+                        'speciality' => $appointment->reason->speciality->name,
+                        'reason' => $appointment->reason->name,
+                        'appointment_reason_id' => $appointment->appointment_reason_id,
+                        'notes' => $appointment->notes,
+                    ];
+                }),
         ];
 
-        return inertia('Admin/Patients/Show', ['patient' => $data]);
+        return inertia('Admin/Patients/Show', [
+            'patient' => $data,
+            'doctors' => $doctors,
+        ]);
     }
     /**
      * Show the form for creating a new resource.
