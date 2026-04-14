@@ -13,10 +13,10 @@ class SpecialityController extends Controller
         $specialities = Speciality::orderBy('name')
             ->withCount('appointmentReasons')
             ->get()
-            ->map(fn($s) => [
-                'id'                       => $s->id,
-                'name'                     => $s->name,
-                'appointment_reasons_count' => $s->appointment_reasons_count,
+            ->map(fn($speciality) => [
+                'id' => $speciality->id,
+                'name' => $speciality->name,
+                'appointment_reasons_count' => $speciality->appointment_reasons_count,
             ]);
 
         return inertia('Admin/Specialities/Index', compact('specialities'));
@@ -28,7 +28,7 @@ class SpecialityController extends Controller
             'name' => 'required|string|max:100|unique:specialities,name',
         ], [
             'name.required' => 'El nombre de la especialidad es obligatorio.',
-            'name.unique'   => 'Ya existe una especialidad con ese nombre.',
+            'name.unique' => 'Ya existe una especialidad con ese nombre.',
         ]);
 
         Speciality::create(['name' => $request->name]);
@@ -42,7 +42,7 @@ class SpecialityController extends Controller
             'name' => 'required|string|max:100|unique:specialities,name,' . $speciality->id,
         ], [
             'name.required' => 'El nombre de la especialidad es obligatorio.',
-            'name.unique'   => 'Ya existe una especialidad con ese nombre.',
+            'name.unique' => 'Ya existe una especialidad con ese nombre.',
         ]);
 
         $speciality->update(['name' => $request->name]);
@@ -52,20 +52,15 @@ class SpecialityController extends Controller
 
     public function destroy(Speciality $speciality)
     {
-        // Verificar si tiene motivos asociados
-        if ($speciality->appointmentReasons()->count() > 0) {
+        // Se mantiene esta regla funcional: si hay medicos asignados, no se elimina.
+        if ($speciality->doctors()->exists()) {
             return back()->withErrors([
-                'delete' => 'No se puede eliminar: esta especialidad tiene motivos de cita asociados.'
+                'delete' => 'No se puede eliminar: hay medicos asignados a esta especialidad.',
             ]);
         }
 
-        // Verificar si tiene médicos asociados
-        if ($speciality->doctors()->count() > 0) {
-            return back()->withErrors([
-                'delete' => 'No se puede eliminar: hay médicos asignados a esta especialidad.'
-            ]);
-        }
-
+        // Cascada en base de datos:
+        // specialities -> appointment_reasons -> appointments.
         $speciality->delete();
 
         return back()->with('success', 'Especialidad eliminada correctamente.');
