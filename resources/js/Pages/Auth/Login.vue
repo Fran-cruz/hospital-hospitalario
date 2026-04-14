@@ -1,5 +1,6 @@
 <script setup>
 import { useForm, Link } from '@inertiajs/vue3'
+import {computed} from "vue";
 
 defineProps({
     canResetPassword: Boolean,
@@ -17,6 +18,12 @@ const submit = () => {
         onFinish: () => form.reset('password'),
     })
 }
+const waLink = computed(() => {
+    const num = '50494599288'
+    const text = `Solicito ayuda para iniciar sesion. Olvide mi contraseña.`
+
+    return `https://wa.me/${num}?text=${encodeURIComponent(text)}`
+})
 </script>
 
 <template>
@@ -107,7 +114,7 @@ const submit = () => {
                         </label>
                         <Link
                             v-if="canResetPassword"
-                            :href="route('password.request')"
+                            :href="waLink"
                             class="text-sm text-indigo-600 hover:text-indigo-800 transition"
                         >
                             ¿Olvidaste tu contraseña?
