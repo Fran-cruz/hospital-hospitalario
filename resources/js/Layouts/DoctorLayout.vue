@@ -22,11 +22,7 @@ const isActive = (routeName) => route().current(routeName)
             permanent
             :width="240"
             :rail-width="60"
-<<<<<<< HEAD
             color="blue-darken-4"
-=======
-            color="blue-darken-4" <!-- Cambio de color aquí -->
->>>>>>> 43042db (style: Cambiar el color del panel lateral en `DoctorLayout.vue`)
         >
             <!-- Logo -->
             <v-list nav>
