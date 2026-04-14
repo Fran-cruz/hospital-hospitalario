@@ -44,6 +44,9 @@ class AppointmentPolicy
 
     public function reprogram(User $user, Appointment $appointment): bool
     {
-        return $this->cancel($user, $appointment);
+        return $user->role === 'patient'
+            && $user->patient
+            && $appointment->patient_id === $user->patient->id
+            && in_array($appointment->status, ['pending', 'cancelled'], true);
     }
 }

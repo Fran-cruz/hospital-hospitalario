@@ -4,15 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\Appointment;
 use App\Models\Doctor;
+use App\Services\AppointmentService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class AppointmentController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    public function __construct(protected AppointmentService $service) {}
+
     public function index(Request $request)
     {
         $appointments = Appointment::with(['patient.user', 'doctor.user', 'reason.speciality'])
@@ -22,84 +22,123 @@ class AppointmentController extends Controller
             ->when($request->to, fn($q) => $q->whereDate('start_time', '<=', $request->to))
             ->orderBy('start_time')
             ->get()
-            ->map(fn($a) => [
-                'id'            => $a->id,
-                'start_time'    => $a->start_time ? Carbon::parse($a->start_time)->format('d/m/Y H:i') : null,
-                'end_time'      => $a->end_time ? Carbon::parse($a->end_time)->format('d/m/Y H:i') : null,
-                'start_raw'     => $a->start_time,                    // Para FullCalendar si lo necesitas
-                'status'        => $a->status,
-                'notes'        => $a->notes,
-                'patient' => $a->patient->user->name,
-                'doctor'  => $a->doctor->user->name,
-                'speciality'   => $a->reason->speciality->name,
-                'reason'       => $a->reason->name,
-            ]);
+            ->map(function ($appointment) {
+                $start = Carbon::parse($appointment->start_time);
+                $end = Carbon::parse($appointment->end_time);
 
-        $doctors = Doctor::with('user')->get()
-            ->map(fn($d) => [
-                'id' => $d->id,
-                'name' => $d->user->name,
+                return [
+                    'id' => $appointment->id,
+                    'start_time' => $start->format('d/m/Y H:i'),
+                    'end_time' => $end->format('d/m/Y H:i'),
+                    'start_raw' => $start->toDateTimeString(),
+                    'end_raw' => $end->toDateTimeString(),
+                    'status' => $appointment->status,
+                    'notes' => $appointment->notes,
+                    'patient' => $appointment->patient->user->name,
+                    'doctor' => $appointment->doctor->user->name,
+                    'speciality' => $appointment->reason->speciality->name,
+                    'reason' => $appointment->reason->name,
+                    'appointment_reason_id' => $appointment->appointment_reason_id,
+                ];
+            });
+
+        $doctors = Doctor::with('user')
+            ->get()
+            ->map(fn($doctor) => [
+                'id' => $doctor->id,
+                'name' => $doctor->user->name,
             ]);
 
         return inertia('Admin/Appointments/Index', [
             'appointments' => $appointments,
-            'doctors'      => $doctors,
-            'filters'      => $request->only(['status', 'doctor_id', 'from', 'to']),
+            'doctors' => $doctors,
+            'filters' => $request->only(['status', 'doctor_id', 'from', 'to']),
         ]);
     }
 
-    /**
-     * Cancel an existing appointment.
-     */
-    public function cancel(Request $request, Appointment $appointment)
+    public function show(Appointment $appointment)
     {
+        $appointment->load(['patient.user', 'doctor.user', 'reason.speciality']);
+
+        return response()->json([
+            'id' => $appointment->id,
+            'status' => $appointment->status,
+            'start_time' => Carbon::parse($appointment->start_time)->toDateTimeString(),
+            'end_time' => Carbon::parse($appointment->end_time)->toDateTimeString(),
+            'patient' => $appointment->patient->user->name,
+            'doctor' => $appointment->doctor->user->name,
+            'speciality' => $appointment->reason->speciality->name,
+            'reason' => $appointment->reason->name,
+            'notes' => $appointment->notes,
+        ]);
+    }
+
+    public function confirm(Appointment $appointment)
+    {
+        if ($appointment->status !== 'pending') {
+            return back()->withErrors([
+                'action' => 'Solo se pueden confirmar citas en estado pendiente.',
+            ]);
+        }
+
+        $appointment->update(['status' => 'confirmed']);
+
+        return back()->with('success', 'Cita confirmada exitosamente.');
+    }
+
+    public function cancel(Appointment $appointment)
+    {
+        if (!in_array($appointment->status, ['pending', 'confirmed'], true)) {
+            return back()->withErrors([
+                'action' => 'Solo se pueden cancelar citas pendientes o confirmadas.',
+            ]);
+        }
+
         $appointment->update(['status' => 'cancelled']);
+
         return back()->with('success', 'Cita cancelada exitosamente.');
     }
 
-    /**
-     * Reprogram an existing appointment.
-     */
     public function reprogram(Request $request, Appointment $appointment)
     {
-        $validator = Validator::make($request->all(), [
-            'start_time' => 'required|date_format:Y-m-d H:i',
-            'end_time' => 'required|date_format:Y-m-d H:i|after:start_time',
+        if ($appointment->status === 'confirmed') {
+            return back()->withErrors([
+                'action' => 'Una cita confirmada debe cancelarse primero para reprogramarla.',
+            ]);
+        }
+
+        if ($appointment->status === 'completed') {
+            return back()->withErrors([
+                'action' => 'No se puede reprogramar una cita completada.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'date' => 'required|date|after_or_equal:today',
+            'time_from' => 'required|date_format:H:i',
+            'time_to' => 'required|date_format:H:i',
+            'doctor_id' => 'nullable|exists:doctors,id',
             'notes' => 'nullable|string',
         ]);
 
-        if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput();
+        try {
+            $this->service->reprogramAppointment(
+                $appointment,
+                $appointment->appointment_reason_id,
+                $validated['date'],
+                $validated['time_from'],
+                $validated['time_to'],
+                $validated['doctor_id'] ?? null,
+                $validated['notes'] ?? null
+            );
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\InvalidArgumentException $e) {
+            return back()->withErrors(['availability' => $e->getMessage()]);
+        } catch (\Throwable) {
+            return back()->withErrors(['availability' => 'No hay disponibilidad en el rango seleccionado.']);
         }
-
-        $start = Carbon::parse($request->start_time);
-        $end = Carbon::parse($request->end_time);
-
-        if ($this->hasConflict($appointment->doctor_id, $start, $end, $appointment->id)) {
-            return back()->withErrors(['availability' => 'El médico ya tiene cita en ese horario.']);
-        }
-
-        $appointment->update([
-            'start_time' => $start,
-            'end_time' => $end,
-            'notes' => $request->notes,
-        ]);
 
         return back()->with('success', 'Cita reprogramada exitosamente.');
-    }
-
-    private function hasConflict($doctorId, $start, $end, $appointmentId = null)
-    {
-        return Appointment::where('doctor_id', $doctorId)
-            ->where('status', '!=', 'cancelled')
-            ->where('id', '!=', $appointmentId)
-            ->where(function ($q) use ($start, $end) {
-                $q->whereBetween('start_time', [$start, $end])
-                    ->orWhereBetween('end_time', [$start, $end])
-                    ->orWhere(function ($q2) use ($start, $end) {
-                        $q2->where('start_time', '<=', $start)
-                            ->where('end_time', '>=', $end);
-                    });
-            })->exists();
     }
 }
